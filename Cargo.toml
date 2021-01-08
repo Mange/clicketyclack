@@ -3,7 +3,13 @@ name = "clicketyclack"
 version = "0.1.0"
 authors = ["Magnus Bergmark <me@mange.dev>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+build = "build.rs"
 
 [dependencies]
+rodio = "0.13.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.82"
+
+[build-dependencies]
+cmake = "0.1.31"
