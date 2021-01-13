@@ -1,5 +1,6 @@
 mod adapter;
 mod audio_player;
+mod resources;
 mod sounds;
 
 use crate::adapter::{Adapter, ConnectError};

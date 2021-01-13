@@ -1,9 +1,9 @@
+use crate::resources;
 use crate::Model;
 use rodio::{source::Buffered, Decoder, Source};
-use std::fs::File;
-use std::io::BufReader;
+use std::io::Cursor;
 
-pub type Sound = Buffered<Decoder<BufReader<File>>>;
+pub type Sound = Buffered<Decoder<Cursor<&'static [u8]>>>;
 
 pub struct Sounds {
     down: SoundSet,
@@ -14,8 +14,8 @@ impl Sounds {
     pub fn load(model: Model) -> Sounds {
         match model {
             Model::KailhBoxWhite => Sounds {
-                down: SoundSet::load("down", "kailh_white", 5),
-                up: SoundSet::load("up", "kailh_white", 5),
+                down: SoundSet::load(resources::load_kailh_white_down()),
+                up: SoundSet::load(resources::load_kailh_white_up()),
             },
         }
     }
@@ -35,20 +35,9 @@ pub struct SoundSet {
 }
 
 impl SoundSet {
-    pub fn load(direction: &str, name: &str, count: i32) -> SoundSet {
-        assert!(count > 0);
-
-        let sounds = (1..=count)
-            .into_iter()
-            .map(|i| {
-                load_audio_file(&format!(
-                    "resources/{name}/{direction}{n}.wav",
-                    name = name,
-                    direction = direction,
-                    n = i
-                ))
-            })
-            .collect();
+    pub fn load(resource: Vec<&'static [u8]>) -> SoundSet {
+        let sounds: Vec<Sound> = resource.into_iter().map(decode_wav).collect();
+        assert!(sounds.len() >= 1);
 
         SoundSet {
             current_index: 0,
@@ -63,9 +52,8 @@ impl SoundSet {
     }
 }
 
-fn load_audio_file(path: &str) -> Sound {
-    let sound_file = File::open(path).unwrap();
-    rodio::Decoder::new(BufReader::new(sound_file))
+fn decode_wav(bytes: &'static [u8]) -> Sound {
+    rodio::Decoder::new_wav(Cursor::new(bytes))
         .unwrap()
         .buffered()
 }
