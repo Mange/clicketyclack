@@ -2,6 +2,7 @@
 name = "clicketyclack"
 version = "0.1.0"
 authors = ["Magnus Bergmark <me@mange.dev>"]
+license = "MIT"
 edition = "2018"
 build = "build.rs"
 
