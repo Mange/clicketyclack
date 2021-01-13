@@ -18,18 +18,8 @@ pub struct Adapter {
     pub channel: Sender<Event>,
 }
 
-pub enum ConnectError {
-    FailedToOpenDisplay,
-    MissingXkbQueryExtension,
-    MissingXRecordExtension,
-    XRecordAllocationFailed,
-    XRecordSetupFailed,
-    XRecordEnableFailed,
-    UnknownError(i32),
-}
-
 impl Adapter {
-    pub fn connect(send_channel: Sender<Event>) -> Result<Box<Adapter>, ConnectError> {
+    pub fn connect(send_channel: Sender<Event>) -> Result<Box<Adapter>, i32> {
         let adapter = Box::new(Adapter {
             channel: send_channel,
         });
@@ -43,15 +33,7 @@ impl Adapter {
             let result = initialize_adapter(instance_pointer);
             if result < 0 {
                 cleanup();
-                match result {
-                    -1 => return Err(ConnectError::FailedToOpenDisplay),
-                    -2 => return Err(ConnectError::MissingXkbQueryExtension),
-                    -3 => return Err(ConnectError::MissingXRecordExtension),
-                    -4 => return Err(ConnectError::XRecordAllocationFailed),
-                    -5 => return Err(ConnectError::XRecordSetupFailed),
-                    -6 => return Err(ConnectError::XRecordEnableFailed),
-                    n => return Err(ConnectError::UnknownError(n)),
-                }
+                return Err(result);
             }
         }
 

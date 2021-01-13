@@ -3,7 +3,7 @@ mod audio_player;
 mod resources;
 mod sounds;
 
-use crate::adapter::{Adapter, ConnectError};
+use crate::adapter::Adapter;
 use audio_player::AudioPlayer;
 use std::sync::mpsc;
 use std::thread;
@@ -21,14 +21,8 @@ pub enum Model {
 fn main() -> Result<(), String> {
     let (sender, receiver) = mpsc::channel();
 
-    let adapter = Adapter::connect(sender).map_err(|error| match error {
-        ConnectError::FailedToOpenDisplay => "Failed to open display".to_string(),
-        ConnectError::MissingXkbQueryExtension => "XkbQueryExtension is missing".to_string(),
-        ConnectError::MissingXRecordExtension => "XRecord extension is missing".to_string(),
-        ConnectError::XRecordAllocationFailed => "XRecord could not be allocated".to_string(),
-        ConnectError::XRecordSetupFailed => "XRecord could not be setup".to_string(),
-        ConnectError::XRecordEnableFailed => "XRecord could not be enabled".to_string(),
-        ConnectError::UnknownError(code) => format!("Unknown error: {}", code),
+    let adapter = Adapter::connect(sender).map_err(|error_code| {
+        format!("Could not connect to adapter: Error code: {}", error_code)
     })?;
 
     // Record keys thread

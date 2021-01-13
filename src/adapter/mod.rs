@@ -2,4 +2,4 @@
 mod linux;
 
 #[cfg(target_os = "linux")]
-pub use self::linux::{Adapter, ConnectError};
+pub use self::linux::Adapter;
