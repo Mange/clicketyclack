@@ -33,12 +33,12 @@ fn main() -> Result<(), String> {
     // Audio setup
     let mut sounds = sounds::Sounds::load(Model::KailhBoxWhite);
     let volume = 0.3; // TODO: Make this changeable at runtime somehow
-    let audio_player = AudioPlayer::new();
+    let audio_player = AudioPlayer::new(volume);
 
     for event in receiver {
         match event {
-            Event::KeyDown => audio_player.play_sound(sounds.next_down(), volume),
-            Event::KeyUp => audio_player.play_sound(sounds.next_up(), volume),
+            Event::KeyDown => audio_player.play_sound(sounds.next_down()),
+            Event::KeyUp => audio_player.play_sound(sounds.next_up()),
         }
     }
 
