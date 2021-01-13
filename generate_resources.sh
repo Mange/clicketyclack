@@ -3,10 +3,6 @@
 # Regenerate `src/resources.rs`.
 #
 
-uppercase() {
-  tr '[:lower:]' '[:upper:]'
-}
-
 sanitize_identifier() {
   tr -cd 'a-z_'
 }
