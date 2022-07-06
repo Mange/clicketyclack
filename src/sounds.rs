@@ -37,7 +37,7 @@ pub struct SoundSet {
 impl SoundSet {
     pub fn load(resource: Vec<&'static [u8]>) -> SoundSet {
         let sounds: Vec<Sound> = resource.into_iter().map(decode_wav).collect();
-        assert!(sounds.len() >= 1);
+        assert!(!sounds.is_empty());
 
         SoundSet {
             current_index: 0,
