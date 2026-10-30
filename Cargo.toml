@@ -1,17 +1,21 @@
 [package]
 name = "clicketyclack"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Magnus Bergmark <me@mange.dev>"]
 license = "MIT"
 edition = "2021"
 build = "build.rs"
 
 [dependencies]
-rodio = "0.15.0"
-structopt = "0.3.21"
+# For Pulseaudio support.
+#  https://github.com/RustAudio/rodio/pull/888
+# No release yet as of 2026-10-30.
+rodio = { git = "https://github.com/RustAudio/rodio.git", default-features = false, features = ["simd", "wav", "playback"] }
+
+structopt = "0.3.26"
 
 [target.'cfg(unix)'.dependencies]
-libc = "0.2.82"
+libc = "0.2.191"
 
 [build-dependencies]
 cc = "1.0"

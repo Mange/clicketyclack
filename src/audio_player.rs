@@ -1,26 +1,19 @@
 use crate::sounds::Sound;
-use rodio::{OutputStream, OutputStreamHandle, Source};
+use rodio::{DeviceSinkBuilder, Source};
 
 pub struct AudioPlayer {
-    _stream: OutputStream,
-    stream_handle: OutputStreamHandle,
+    sink: rodio::MixerDeviceSink,
     volume: f32,
 }
 
 impl AudioPlayer {
-    pub fn new(volume: f32) -> Self {
-        let (stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+    pub fn build(volume: f32) -> Result<Self, rodio::DeviceSinkError> {
+        let sink = DeviceSinkBuilder::open_default_sink()?;
 
-        AudioPlayer {
-            _stream: stream,
-            stream_handle,
-            volume,
-        }
+        Ok(AudioPlayer { sink, volume })
     }
 
     pub fn play_sound(&self, sound: Sound) {
-        self.stream_handle
-            .play_raw(sound.amplify(self.volume).convert_samples())
-            .ok();
+        self.sink.mixer().add(sound.amplify(self.volume));
     }
 }

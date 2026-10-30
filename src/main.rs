@@ -62,7 +62,8 @@ fn main() -> Result<(), String> {
 
     // Audio setup
     let mut sounds = sounds::Sounds::load(options.model);
-    let audio_player = AudioPlayer::new(options.volume);
+    let audio_player = AudioPlayer::build(options.volume)
+        .map_err(|error| format!("Could not open default audio device: {error}"))?;
 
     for event in receiver {
         match event {

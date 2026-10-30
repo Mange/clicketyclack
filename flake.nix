@@ -22,6 +22,7 @@
         {
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
+              bash
               pkgconf
 
               # liblinuxadapter (X11, Pipewire, ALSA)
