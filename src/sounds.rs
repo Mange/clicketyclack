@@ -14,8 +14,8 @@ impl Sounds {
     pub fn load(model: Model) -> Sounds {
         match model {
             Model::KailhBoxWhite => Sounds {
-                down: SoundSet::load(resources::load_kailh_white_down()),
-                up: SoundSet::load(resources::load_kailh_white_up()),
+                down: SoundSet::load(&resources::KAILH_WHITE_DOWN),
+                up: SoundSet::load(&resources::KAILH_WHITE_UP),
             },
         }
     }
@@ -35,8 +35,8 @@ pub struct SoundSet {
 }
 
 impl SoundSet {
-    pub fn load(resource: Vec<&'static [u8]>) -> SoundSet {
-        let sounds: Vec<Sound> = resource.into_iter().map(decode_wav).collect();
+    pub fn load(resource: &[&'static [u8]]) -> SoundSet {
+        let sounds: Vec<Sound> = resource.iter().map(|bytes| decode_wav(bytes)).collect();
         assert!(!sounds.is_empty());
 
         SoundSet {
