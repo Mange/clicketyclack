@@ -6,7 +6,6 @@
 #include <math.h>
 #include <sys/select.h>
 
-void *instance;
 KeyEventCallback on_key_down;
 KeyEventCallback on_key_up;
 
@@ -30,9 +29,7 @@ int max(int a, int b) { return a > b ? a : b; }
 void register_on_key_down(KeyEventCallback callback) { on_key_down = callback; }
 void register_on_key_up(KeyEventCallback callback) { on_key_up = callback; }
 
-int32_t initialize_adapter(void *_instance) {
-  instance = _instance;
-
+int32_t initialize_adapter(void *instance) {
   data_display = XOpenDisplay(NULL);
   if (!data_display) {
     cleanup();
@@ -78,7 +75,7 @@ int32_t initialize_adapter(void *_instance) {
   }
 
   if (!XRecordEnableContextAsync(data_display, record_context, event_callback,
-                                 NULL)) {
+                                 instance)) {
     cleanup();
     return -6;
   }
@@ -158,6 +155,8 @@ typedef union {
 } XRecordDatum;
 
 void event_callback(XPointer p, XRecordInterceptData *data) {
+  void *instance = (void *)p;
+
   // Skip if not from server
   if (data->category != XRecordFromServer) {
     XRecordFreeData(data);
