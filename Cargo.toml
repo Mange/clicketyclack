@@ -12,7 +12,7 @@ build = "build.rs"
 # No release yet as of 2026-10-30.
 rodio = { git = "https://github.com/RustAudio/rodio.git", default-features = false, features = ["simd", "wav", "playback"] }
 
-structopt = "0.3.26"
+clap = { version = "4.6", features = ["derive"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.191"

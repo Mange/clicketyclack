@@ -3,42 +3,42 @@ mod audio_player;
 mod resources;
 mod sounds;
 
-use crate::adapter::Adapter;
 use audio_player::AudioPlayer;
+use clap::Parser;
 use std::sync::mpsc;
-use std::thread;
-use structopt::clap::arg_enum;
-use structopt::StructOpt;
 
-arg_enum! {
-    #[derive(Copy, Clone, Debug)]
-    pub enum Model {
-        KailhBoxWhite,
-    }
+use crate::adapter::Adapter;
+
+#[derive(Clone, clap::ValueEnum)]
+#[value(rename_all = "PascalCase")]
+pub enum Model {
+    KailhBoxWhite,
 }
 
-#[derive(StructOpt)]
-#[structopt(
-    about = "Play sounds of mechanical keyboards when you type, for that extra clicky feeling inside your headset without waking up your family in the night.",
-    setting = structopt::clap::AppSettings::ColoredHelp
-)]
+#[derive(Parser)]
+#[command(version, about)]
+/// Play sounds of mechanical keyboards when you type, for that extra clicky feeling inside your
+/// headset without waking up your family in the night.
 struct Options {
-    #[structopt(
+    #[arg(
+        value_enum,
         long = "model",
-        short = "m",
+        short = 'm',
         default_value = "KailhBoxWhite",
-        possible_values = &Model::variants(),
-        value_name = "NAME",
+        value_name = "NAME"
     )]
+    /// The switch model you want to emulate.
     model: Model,
 
-    #[structopt(
+    #[arg(
         long = "volume",
-        short = "l",
+        short = 'l',
         alias = "level",
         default_value = "1.0",
-        value_name = "FLOAT"
+        value_name = "FLOAT",
+        value_parser = volume_parser
     )]
+    /// Fixed volume level for the duration of the program (between >0.0 and 2.0).
     volume: f32,
 }
 
@@ -47,8 +47,19 @@ pub enum Event {
     KeyUp,
 }
 
+fn volume_parser(value: &str) -> Result<f32, String> {
+    let volume: f32 = value
+        .parse()
+        .map_err(|_| format!("`{value}` isn't a valid float"))?;
+
+    if volume <= 0.0 || volume > 2.0 {
+        return Err(format!("`{value}` is not in range 0 < volume ≤ 2.0"));
+    }
+    Ok(volume)
+}
+
 fn main() -> Result<(), String> {
-    let options = Options::from_args();
+    let options = Options::parse();
     let (sender, receiver) = mpsc::channel();
 
     let adapter = Adapter::connect(sender).map_err(|error_code| {
@@ -61,7 +72,7 @@ fn main() -> Result<(), String> {
         .map_err(|error| format!("Could not open default audio device: {error}"))?;
 
     // Record keys thread
-    thread::spawn(move || {
+    std::thread::spawn(move || {
         adapter.block();
     });
 
