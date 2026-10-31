@@ -3,7 +3,7 @@ name = "clicketyclack"
 version = "0.2.0"
 authors = ["Magnus Bergmark <me@mange.dev>"]
 license = "MIT"
-edition = "2021"
+edition = "2024"
 build = "build.rs"
 
 [dependencies]

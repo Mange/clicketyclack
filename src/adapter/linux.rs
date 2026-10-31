@@ -5,7 +5,7 @@ use std::sync::mpsc::Sender;
 type Callback = extern "C" fn(instance: *mut c_void);
 
 #[link(name = "linuxadapter", kind = "static")]
-extern "C" {
+unsafe extern "C" {
     pub fn initialize_adapter() -> i32;
     pub fn cleanup();
     pub fn blocking_loop() -> i32;
