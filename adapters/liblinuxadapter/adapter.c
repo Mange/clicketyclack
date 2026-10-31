@@ -1,184 +1,160 @@
 #include "adapter.h"
-#include <X11/XKBlib.h>
-#include <X11/Xlib.h>
-#include <X11/Xproto.h>
-#include <X11/extensions/record.h>
-#include <math.h>
-#include <sys/select.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <libinput.h>
+#include <libudev.h>
+#include <poll.h>
+#include <unistd.h>
 
-KeyEventCallback on_key_down;
-KeyEventCallback on_key_up;
+#include <stdio.h>
 
-// Internal event callback
-void event_callback(XPointer, XRecordInterceptData *);
+#define UNUSED(x) (void)(x)
 
-// Display to receive data on
-Display *data_display = NULL;
+/** State variables **/
 
-// Display to send commands on
-Display *control_display = NULL;
+KeyEventCallback on_key_down = NULL;
+void *on_key_down_userdata = NULL;
 
-// Parameters for recording
-XRecordRange *record_range = NULL;
+KeyEventCallback on_key_up = NULL;
+void *on_key_up_userdata = NULL;
 
-// Actual context of recording
-XRecordContext record_context;
+struct udev *udev = NULL;
+struct libinput *li = NULL;
 
-int max(int a, int b) { return a > b ? a : b; }
+/** libinput context **/
 
-void register_on_key_down(KeyEventCallback callback) { on_key_down = callback; }
-void register_on_key_up(KeyEventCallback callback) { on_key_up = callback; }
+static int open_restricted(const char *path, int flags, void *user_data) {
+  UNUSED(user_data);
+  int fd = open(path, flags);
+  return fd < 0 ? -errno : fd;
+}
 
-int32_t initialize_adapter(void *instance) {
-  data_display = XOpenDisplay(NULL);
-  if (!data_display) {
-    cleanup();
-    return -1;
+static void close_restricted(int fd, void *user_data) {
+  UNUSED(user_data);
+  close(fd);
+}
+
+static const struct libinput_interface interface = {
+    .open_restricted = open_restricted,
+    .close_restricted = close_restricted,
+};
+
+/** Functions **/
+
+void register_on_key_down(KeyEventCallback callback, void *userdata) {
+  on_key_down = callback;
+  on_key_down_userdata = userdata;
+}
+void register_on_key_up(KeyEventCallback callback, void *userdata) {
+  on_key_up = callback;
+  on_key_up_userdata = userdata;
+}
+
+int32_t initialize_adapter() {
+  if (udev != NULL || li != NULL) {
+    return -99;
   }
 
-  control_display = XOpenDisplay(NULL);
-  if (!control_display) {
-    cleanup();
+  udev = udev_new();
+  if (udev == NULL)
     return -1;
-  }
 
-  XSynchronize(control_display, True);
-
-  // Verify required extensions are installed
-  int _idgaf;
-  if (!XkbQueryExtension(control_display, &_idgaf, &_idgaf, &_idgaf, &_idgaf,
-                         &_idgaf)) {
+  li = libinput_udev_create_context(&interface, NULL, udev);
+  if (li == NULL) {
     cleanup();
     return -2;
   }
-  if (!XRecordQueryVersion(control_display, &_idgaf, &_idgaf)) {
-    cleanup();
-    return -3;
-  }
 
-  // Good, now set up the events that are supposed to be captured.
-  record_range = XRecordAllocRange();
-  if (!record_range) {
-    cleanup();
-    return -4;
-  }
-  record_range->device_events.first = KeyPress;
-  record_range->device_events.last = KeyRelease;
-
-  XRecordClientSpec all_clients = XRecordAllClients;
-
-  record_context = XRecordCreateContext(control_display, 0, &all_clients, 1,
-                                        &record_range, 1);
-  if (!record_context) {
-    cleanup();
-    return -5;
-  }
-
-  if (!XRecordEnableContextAsync(data_display, record_context, event_callback,
-                                 instance)) {
-    cleanup();
-    return -6;
-  }
+  libinput_udev_assign_seat(li, "seat0");
 
   return 1;
 }
 
+#define SHOULD_RUN (li != NULL)
+
 void cleanup() {
-  if (control_display != NULL) {
-    XRecordDisableContext(control_display, record_context);
-    XRecordFreeContext(data_display, record_context);
+  register_on_key_up(NULL, NULL);
+  register_on_key_down(NULL, NULL);
+
+  if (li != NULL) {
+    libinput_unref(li);
+    li = NULL;
   }
 
-  if (record_range != NULL) {
-    XFree(record_range);
+  if (udev != NULL) {
+    udev_unref(udev);
+    udev = NULL;
+  }
+}
+
+void _process_events() {
+  struct libinput_event *event;
+  struct libinput_event_keyboard *kb_event;
+  enum libinput_key_state state;
+
+  while (SHOULD_RUN && (event = libinput_get_event(li)) != NULL) {
+    if (libinput_event_get_type(event) != LIBINPUT_EVENT_KEYBOARD_KEY) {
+      libinput_event_destroy(event);
+      continue;
+    }
+
+    kb_event = libinput_event_get_keyboard_event(event);
+    if (kb_event == NULL) {
+      libinput_event_destroy(event);
+      continue;
+    }
+
+    state = libinput_event_keyboard_get_key_state(kb_event);
+    libinput_event_destroy(event);
+
+    switch (state) {
+    case LIBINPUT_KEY_STATE_RELEASED:
+      if (on_key_up != NULL)
+        on_key_up(on_key_up_userdata);
+      break;
+    case LIBINPUT_KEY_STATE_PRESSED:
+      if (on_key_down != NULL)
+        on_key_up(on_key_down_userdata);
+      break;
+    }
+  }
+}
+
+int _block_until_events_ready() {
+  const int fds = 1;
+  const int no_timeout = -1;
+
+  struct pollfd pfds[fds];
+  pfds[0].fd = libinput_get_fd(li);
+  pfds[0].events = POLLIN; // Ready to read data
+
+  while (SHOULD_RUN && poll(pfds, fds, no_timeout)) {
+    // poll might have blocked for some time; check again if we should be
+    // running
+    if (SHOULD_RUN && (pfds[0].revents & POLLIN)) {
+      if (libinput_dispatch(li) < 0) {
+        return -1;
+      }
+      return 1;
+    }
   }
 
-  if (control_display != NULL) {
-    XCloseDisplay(control_display);
-  }
-
-  if (data_display != NULL) {
-    XCloseDisplay(data_display);
-  }
+  return 0;
 }
 
 int32_t blocking_loop() {
-  int control_fd = XConnectionNumber(control_display);
-  int data_fd = XConnectionNumber(data_display);
+  if (libinput_dispatch(li) < 0) {
+    return -2;
+  }
+  _process_events();
 
-  while (1) {
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(control_fd, &fds);
-    FD_SET(data_fd, &fds);
-
-    struct timeval timeout;
-    timeout.tv_sec = 2;
-    timeout.tv_usec = 0;
-
-    int result =
-        select(max(control_fd, data_fd) + 1, &fds, NULL, NULL, &timeout);
-    if (result == -1) {
-      return -1;
+  while (SHOULD_RUN) {
+    int res = _block_until_events_ready();
+    if (res < 1) {
+      return res;
     }
-
-    if (FD_ISSET(data_fd, &fds)) {
-      XRecordProcessReplies(data_display);
-    }
-
-    if (FD_ISSET(control_fd, &fds)) {
-      XEvent event;
-      XNextEvent(control_display, &event);
-      if (event.type == MappingNotify) {
-        XMappingEvent *e = (XMappingEvent *)&event;
-        if (e->request == MappingKeyboard) {
-          XRefreshKeyboardMapping(e);
-        }
-      }
-    }
+    _process_events();
   }
 
-  return 1;
-}
-
-/*
-Type not defined in the X11 libs; copied from Espanso repo, which adapted it
-from libxnee.
-*/
-typedef union {
-  unsigned char type;
-  xEvent event;
-  xResourceReq req;
-  xGenericReply reply;
-  xError error;
-  xConnSetupPrefix setup;
-} XRecordDatum;
-
-void event_callback(XPointer p, XRecordInterceptData *data) {
-  void *instance = (void *)p;
-
-  // Skip if not from server
-  if (data->category != XRecordFromServer) {
-    XRecordFreeData(data);
-    return;
-  }
-
-  // I have no idea how this fits together. This is copypasta all over the
-  // internet, and no one is figuring it out.
-  // X11 people should try to document more, I guess.
-  int repeat = data->data[2] & 1;
-  if (repeat) {
-    return;
-  }
-
-  XRecordDatum *inner = (XRecordDatum *)data->data;
-
-  switch (inner->type) {
-  case KeyPress:
-    on_key_down(instance);
-    break;
-  case KeyRelease:
-    on_key_up(instance);
-    break;
-  }
+  return 0;
 }

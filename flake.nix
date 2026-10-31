@@ -22,14 +22,15 @@
         {
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
+              # For generating the resources file
               bash
-              pkgconf
 
-              # liblinuxadapter (X11, Pipewire, ALSA)
-              libx11
-              libxext
-              libxtst
+              # For audio playback library compilation
+              pkgconf
               alsa-lib
+
+              # liblinuxadapter (libinput, udev)
+              libinput
             ];
           };
         }

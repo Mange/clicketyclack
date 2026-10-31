@@ -55,15 +55,15 @@ fn main() -> Result<(), String> {
         format!("Could not connect to adapter: Error code: {}", error_code)
     })?;
 
-    // Record keys thread
-    thread::spawn(move || {
-        adapter.block();
-    });
-
     // Audio setup
     let mut sounds = sounds::Sounds::load(options.model);
     let audio_player = AudioPlayer::build(options.volume)
         .map_err(|error| format!("Could not open default audio device: {error}"))?;
+
+    // Record keys thread
+    thread::spawn(move || {
+        adapter.block();
+    });
 
     for event in receiver {
         match event {

@@ -8,7 +8,8 @@ pub struct AudioPlayer {
 
 impl AudioPlayer {
     pub fn build(volume: f32) -> Result<Self, rodio::DeviceSinkError> {
-        let sink = DeviceSinkBuilder::open_default_sink()?;
+        let mut sink = DeviceSinkBuilder::open_default_sink()?;
+        sink.log_on_drop(false);
 
         Ok(AudioPlayer { sink, volume })
     }

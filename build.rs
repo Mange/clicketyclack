@@ -2,6 +2,7 @@
 fn get_config() -> &'static str {
     println!("cargo:rerun-if-changed=adapters/liblinuxadapter/adapter.h");
     println!("cargo:rerun-if-changed=adapters/liblinuxadapter/adapter.c");
+
     cc::Build::new()
         .file("adapters/liblinuxadapter/adapter.c")
         // Optimization must be enabled, or else this warning is emitted:
@@ -11,15 +12,15 @@ fn get_config() -> &'static str {
         // until you have it working again.
         .opt_level(3)
         .compile("linuxadapter");
+
     "linuxadapter"
 }
 
 #[cfg(target_os = "linux")]
 fn print_config() {
-    println!("cargo:rustc-link-search=native=/usr/lib/x86_64-linux-gnu/");
     println!("cargo:rustc-link-lib=static=linuxadapter");
-    println!("cargo:rustc-link-lib=dylib=X11");
-    println!("cargo:rustc-link-lib=dylib=Xtst");
+    println!("cargo:rustc-link-lib=dylib=input");
+    println!("cargo:rustc-link-lib=dylib=udev");
 }
 
 fn main() {

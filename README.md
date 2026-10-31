@@ -14,19 +14,18 @@ headset while you type while the other people around you don't have to suffer.
 
 ## Platform support
 
-* **Supported right now:**
-  * Linux/X11
-* **Planned support:** ("Some day", like that will ever happen…)
-  * Windows
-* **PRs welcome for:**
-  * macOS
-  * Windows
-  * Linux/Wayland
-  * Other platforms
+- **Supported right now:**
+  - Linux (Wayland or X11)
+- **Planned support:** ("Some day", like that will ever happen…)
+  - Windows
+- **PRs welcome for:**
+  - macOS
+  - Windows
+  - Other platforms
 
 ## Switches
 
-* Kailh Box White
+- Kailh Box White
 
 ## Q&A
 
@@ -68,12 +67,13 @@ you.
 
 The main application is fairly small with most of the complexity laying inside
 adapters for the different platforms. For Linux that adapter is written in C
-and uses the (pretty much undocumented X11 API) to record key presses.
+and uses `libinput` to monitor keyboard events. This means you must run this
+program with the `input` group or you will not be able to read raw events.
 
-When the application is built for a specific platform that platform's adapter
-is also compiled and embedded.
+If this is a problem for you, open an issue and we could perhaps find a
+workaround.
 
 ## License
 
 Released under the MIT License. See `LICENSE` for the full license text.
-Copyright © 2021 Magnus Bergmark
+Copyright © 2026 Magnus Bergmark
