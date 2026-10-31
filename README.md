@@ -16,8 +16,6 @@ headset while you type while the other people around you don't have to suffer.
 
 - **Supported right now:**
   - Linux (Wayland or X11)
-- **Planned support:** ("Some day", like that will ever happen…)
-  - Windows
 - **PRs welcome for:**
   - macOS
   - Windows
@@ -26,6 +24,29 @@ headset while you type while the other people around you don't have to suffer.
 ## Switches
 
 - Kailh Box White
+
+## Installing
+
+### Nix
+
+The repository is a Nix flake. To try it out without installing:
+
+```sh
+nix run github:Mange/clicketyclack
+```
+
+To install it into your profile:
+
+```sh
+nix profile add github:Mange/clicketyclack
+```
+
+To add it to a NixOS or Home Manager configuration, add the flake as an input
+and either use `inputs.clicketyclack.packages.${system}.default` directly, or
+apply `inputs.clicketyclack.overlays.default` to get `pkgs.clicketyclack`.
+
+Remember that your user must be in the `input` group (see "How does it work?"
+below).
 
 ## Q&A
 
